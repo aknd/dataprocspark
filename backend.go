@@ -49,6 +49,7 @@ const (
     "initializationAction": "{{.InitializationAction}}",
     "configBucket": "{{.ConfigBucket}}",
     "bucketName": "{{.BucketName}}",
+    "args": "{{.Args}}",
     "pysparkFile": "{{.PysparkFile}}",
     "jarFile": "{{.JarFile}}",
     "mainClass": "{{.MainClass}}",
@@ -94,6 +95,7 @@ type QueueTask struct {
     InitializationAction string
     ConfigBucket string
     BucketName string
+    Args string
     PysparkFile string
     JarFile string
     MainClass string
@@ -190,6 +192,8 @@ func enqueue(w http.ResponseWriter, r *http.Request) {
         panic("Enqueue failed.")
     }
 
+    args:= r.FormValue("args")
+
     delete := r.FormValue("delete")
     if delete == "" {
         delete = "1"
@@ -245,6 +249,7 @@ func enqueue(w http.ResponseWriter, r *http.Request) {
             InitializationAction: initializationAction,
             ConfigBucket: configBucket,
             BucketName: bucketName,
+            Args: args,
             PysparkFile: mainFile,
             Delete: delete,
             QueueName: queueName,
@@ -262,6 +267,7 @@ func enqueue(w http.ResponseWriter, r *http.Request) {
             "initializationAction": {task.InitializationAction},
             "configBucket": {task.ConfigBucket},
             "bucketName": {task.BucketName},
+            "args": {task.Args},
             "pysparkFile": {task.PysparkFile},
             "delete": {task.Delete},
             "timeoutMin": {task.TimeoutMin},
@@ -294,6 +300,7 @@ func enqueue(w http.ResponseWriter, r *http.Request) {
             InitializationAction: initializationAction,
             ConfigBucket: configBucket,
             BucketName: bucketName,
+            Args: args,
             JarFile: mainFile,
             MainClass: mainClass,
             Delete: delete,
@@ -312,6 +319,7 @@ func enqueue(w http.ResponseWriter, r *http.Request) {
             "initializationAction": {task.InitializationAction},
             "configBucket": {task.ConfigBucket},
             "bucketName": {task.BucketName},
+            "args": {task.Args},
             "jarFile": {task.JarFile},
             "mainClass": {task.MainClass},
             "delete": {task.Delete},
@@ -344,6 +352,7 @@ func pysparkSubmit(w http.ResponseWriter, r *http.Request) {
     initializationAction := r.FormValue("initializationAction")
     configBucket := r.FormValue("configBucket")
     bucketName := r.FormValue("bucketName")
+    args := r.FormValue("args")
     pysparkFile := r.FormValue("pysparkFile")
     timeoutMin, _ := strconv.ParseInt(r.FormValue("timeoutMin"), 10, 0)
 
@@ -367,6 +376,7 @@ func pysparkSubmit(w http.ResponseWriter, r *http.Request) {
     log.Infof(ctx, "initializationAction: %v", initializationAction)
     log.Infof(ctx, "configBucket: %v", configBucket)
     log.Infof(ctx, "bucketName: %v", bucketName)
+    log.Infof(ctx, "args: %v", args)
     log.Infof(ctx, "pysparkFile: %v", pysparkFile)
     log.Infof(ctx, "delete: %v", delete)
     log.Infof(ctx, "timeoutMin: %v", timeoutMin)
@@ -410,7 +420,7 @@ func pysparkSubmit(w http.ResponseWriter, r *http.Request) {
 
     // Submit a job to the cluster
     log.Infof(ctx, "%v", "Submitting job")
-    jobID, err := submitPySparkJob(service, storageClient, pysparkFile, bucketName, cluster)
+    jobID, err := submitPySparkJob(service, storageClient, pysparkFile, args, bucketName, cluster)
     if err != nil {
         log.Errorf(ctx, "%v", err)
         if _, e := deleteCluster(service, cluster); e != nil {
@@ -474,6 +484,7 @@ func sparkSubmit(w http.ResponseWriter, r *http.Request) {
     initializationAction := r.FormValue("initializationAction")
     configBucket := r.FormValue("configBucket")
     bucketName := r.FormValue("bucketName")
+    args := r.FormValue("args")
     jarFile := r.FormValue("jarFile")
     mainClass := r.FormValue("mainClass")
     timeoutMin, _ := strconv.ParseInt(r.FormValue("timeoutMin"), 10, 0)
@@ -498,6 +509,7 @@ func sparkSubmit(w http.ResponseWriter, r *http.Request) {
     log.Infof(ctx, "initializationAction: %v", initializationAction)
     log.Infof(ctx, "configBucket: %v", configBucket)
     log.Infof(ctx, "bucketName: %v", bucketName)
+    log.Infof(ctx, "args: %v", args)
     log.Infof(ctx, "jarFile: %v", jarFile)
     log.Infof(ctx, "mainClass: %v", mainClass)
     log.Infof(ctx, "delete: %v", delete)
@@ -543,7 +555,7 @@ func sparkSubmit(w http.ResponseWriter, r *http.Request) {
 
     // Submit a job to the cluster
     log.Infof(ctx, "%v", "Submitting job")
-    jobID, err := submitSparkJob(service, storageClient, jarFile, mainClass, bucketName, cluster)
+    jobID, err := submitSparkJob(service, storageClient, jarFile, mainClass, args, bucketName, cluster)
     if err != nil {
         log.Errorf(ctx, "%v", err)
         if _, e := deleteCluster(service, cluster); e != nil {
@@ -707,13 +719,14 @@ func listClusters(service *dataproc.Service, project string, region string) (clu
 }
 
 // submitPySparkJob submits a PySpark job with the given file path to a PySpark file, project, bucket, and cluster.
-func submitPySparkJob(service *dataproc.Service, storageClient *storage.Client, filepath string, bucket string, cluster clusterDetails) (jobID string, err error) {
+func submitPySparkJob(service *dataproc.Service, storageClient *storage.Client, filepath string, args string, bucket string, cluster clusterDetails) (jobID string, err error) {
     // Submit the PySpark job
     placement := dataproc.JobPlacement{
         ClusterName: cluster.name,
     }
     pySparkJob := dataproc.PySparkJob{
         MainPythonFileUri: "gs://" + bucket + "/" + filepath,
+        Args: []string{args},
     }
     loc, _ := time.LoadLocation(location)
     jst := time.Now().In(loc)
@@ -737,7 +750,7 @@ func submitPySparkJob(service *dataproc.Service, storageClient *storage.Client, 
 }
 
 // submitSparkJob submits a Spark job with the given file path to a JAR file, main class, project, bucket, and cluster.
-func submitSparkJob(service *dataproc.Service, storageClient *storage.Client, filepath string, mainClass string, bucket string, cluster clusterDetails) (jobID string, err error) {
+func submitSparkJob(service *dataproc.Service, storageClient *storage.Client, filepath string, mainClass string, args string, bucket string, cluster clusterDetails) (jobID string, err error) {
     // Submit the Spark job
     placement := dataproc.JobPlacement{
         ClusterName: cluster.name,
@@ -745,6 +758,7 @@ func submitSparkJob(service *dataproc.Service, storageClient *storage.Client, fi
     sparkJob := dataproc.SparkJob{
         JarFileUris: []string{"gs://" + bucket + "/" + filepath},
         MainClass: mainClass,
+        Args: []string{args},
     }
     loc, _ := time.LoadLocation(location)
     jst := time.Now().In(loc)
