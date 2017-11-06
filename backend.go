@@ -612,8 +612,11 @@ func createClusterIfNil(service *dataproc.Service, cluster clusterConfig, r *htt
     ctx := appengine.NewContext(r)
 
     // Create a gceConfig object for the cluster
+    var scopes []string
+    scopes = append(scopes, scope)
     gceConfig := dataproc.GceClusterConfig{
-        ZoneUri: fmt.Sprintf(computeURIFormat, cluster.project, cluster.zone),
+        ZoneUri:fmt.Sprintf(computeURIFormat, cluster.project, cluster.zone),
+        ServiceAccountScopes: scopes,
     }
 
     // Create a (Dataproc API) clusterConfig for the cluster
