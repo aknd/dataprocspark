@@ -71,6 +71,7 @@ const (
     initializationActionBucketDefault = "dataproc-initialization-actions"
     initializationActionFolderDefault = "conda"
     initializationActionFileDefault = "bootstrap-conda.sh"
+    initializationTimeout = "1200s"
 
     machineTypeDefault = "n1-standard-4"
     numWorkersDefault = 2
@@ -398,7 +399,7 @@ func pysparkSubmit(w http.ResponseWriter, r *http.Request) {
     machineTypeUri := "https://www.googleapis.com/compute/v1/projects/" + projectID + "/zones/" + zoneID + "/machineTypes/" + machineType
 
     // Create a new clusterConfig to hold details about this cluster
-    configuration := clusterConfig{project: projectID, region: region, name: clusterName, zone: zoneID, bucket: configBucket, initializationActions: []*dataproc.NodeInitializationAction{&dataproc.NodeInitializationAction{ExecutableFile: initializationAction, ExecutionTimeout: "1200s"}}, masterConfig: &dataproc.InstanceGroupConfig{MachineTypeUri: machineTypeUri}, workerConfig: &dataproc.InstanceGroupConfig{MachineTypeUri: machineTypeUri, NumInstances: numWorkers}}
+    configuration := clusterConfig{project: projectID, region: region, name: clusterName, zone: zoneID, bucket: configBucket, initializationActions: []*dataproc.NodeInitializationAction{&dataproc.NodeInitializationAction{ExecutableFile: initializationAction, ExecutionTimeout: initializationTimeout}}, masterConfig: &dataproc.InstanceGroupConfig{MachineTypeUri: machineTypeUri}, workerConfig: &dataproc.InstanceGroupConfig{MachineTypeUri: machineTypeUri, NumInstances: numWorkers}}
 
     // Create a cluster if not exists
     if err := createClusterIfNil(service, configuration, r); err != nil {
@@ -532,7 +533,7 @@ func sparkSubmit(w http.ResponseWriter, r *http.Request) {
     machineTypeUri := "https://www.googleapis.com/compute/v1/projects/" + projectID + "/zones/" + zoneID + "/machineTypes/" + machineType
 
     // Create a new clusterConfig to hold details about this cluster
-    configuration := clusterConfig{project: projectID, region: region, name: clusterName, zone: zoneID, bucket: configBucket, initializationActions: []*dataproc.NodeInitializationAction{&dataproc.NodeInitializationAction{ExecutableFile: initializationAction, ExecutionTimeout: "1200s"}}, masterConfig: &dataproc.InstanceGroupConfig{MachineTypeUri: machineTypeUri}, workerConfig: &dataproc.InstanceGroupConfig{MachineTypeUri: machineTypeUri, NumInstances: numWorkers}}
+    configuration := clusterConfig{project: projectID, region: region, name: clusterName, zone: zoneID, bucket: configBucket, initializationActions: []*dataproc.NodeInitializationAction{&dataproc.NodeInitializationAction{ExecutableFile: initializationAction, ExecutionTimeout: initializationTimeout}}, masterConfig: &dataproc.InstanceGroupConfig{MachineTypeUri: machineTypeUri}, workerConfig: &dataproc.InstanceGroupConfig{MachineTypeUri: machineTypeUri, NumInstances: numWorkers}}
 
     // Create a cluster if not exists
     if err := createClusterIfNil(service, configuration, r); err != nil {
